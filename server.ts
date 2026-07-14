@@ -38,20 +38,17 @@ async function startServer() {
     }
   });
 
-  // POST /api/captures: Secured endpoint to save a capture
-  app.post("/api/captures", requireAuth, async (req: AuthRequest, res) => {
+  // POST /api/captures: Public endpoint to save a capture
+  app.post("/api/captures", async (req, res) => {
     try {
       const { photo, itemType, temperature, isOfficial } = req.body;
       if (!photo) {
         return res.status(400).json({ error: "Photo data is required" });
       }
 
-      // Ensure the user exists in our local PostgreSQL table
-      const dbUser = await getOrCreateUser(req.user!.uid, req.user!.email || 'anonymous@bakery.com');
-
       const [newCapture] = await db.insert(captures)
         .values({
-          userId: dbUser.id,
+          userId: null,
           photo,
           timestamp: Date.now(),
           itemType: itemType || "unknown",
@@ -67,18 +64,16 @@ async function startServer() {
     }
   });
 
-  // DELETE /api/captures/:id: Secured delete
-  app.delete("/api/captures/:id", requireAuth, async (req: AuthRequest, res) => {
+  // DELETE /api/captures/:id: Public delete
+  app.delete("/api/captures/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const dbUser = await getOrCreateUser(req.user!.uid, req.user!.email || 'anonymous@bakery.com');
-
       const result = await db.delete(captures)
-        .where(and(eq(captures.id, id), eq(captures.userId, dbUser.id)))
+        .where(eq(captures.id, id))
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).json({ error: "Capture not found or unauthorized to delete" });
+        return res.status(404).json({ error: "Capture not found" });
       }
       res.json({ success: true });
     } catch (err) {
@@ -87,11 +82,10 @@ async function startServer() {
     }
   });
 
-  // POST /api/captures/clear: Secured clear (clears current user's captures)
-  app.post("/api/captures/clear", requireAuth, async (req: AuthRequest, res) => {
+  // POST /api/captures/clear: Public clear
+  app.post("/api/captures/clear", async (req, res) => {
     try {
-      const dbUser = await getOrCreateUser(req.user!.uid, req.user!.email || 'anonymous@bakery.com');
-      await db.delete(captures).where(eq(captures.userId, dbUser.id));
+      await db.delete(captures);
       res.json({ success: true });
     } catch (err) {
       console.error("Error clearing captures in PostgreSQL:", err);

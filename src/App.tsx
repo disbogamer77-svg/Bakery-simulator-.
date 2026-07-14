@@ -159,6 +159,11 @@ export default function App() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [chefHatEnabled, setChefHatEnabled] = useState(false);
   const [flashActive, setFlashActive] = useState(false);
+  const [chefHatX, setChefHatX] = useState(0);
+  const [chefHatY, setChefHatY] = useState(15);
+  const [chefHatScale, setChefHatScale] = useState(1.2);
+  const [selectedFilter, setSelectedFilter] = useState<'warm' | 'gold' | 'neon' | 'normal'>('warm');
+  const [chefCapturedPhoto, setChefCapturedPhoto] = useState<string | null>(null);
 
   // Restaurant official branding logo / storefront
   const [restaurantLogo, setRestaurantLogo] = useState<string | null>(localStorage.getItem('restaurant_logo'));
@@ -172,6 +177,9 @@ export default function App() {
 
   // Flying ingredients particles
   const [flyingIngredients, setFlyingIngredients] = useState<FlyingIngredient[]>([]);
+
+  // Track ingredients added to the oven to display on the food item
+  const [addedIngredients, setAddedIngredients] = useState<string[]>([]);
 
   // Flying coins particles
   const [flyingCoins, setFlyingCoins] = useState<FlyingCoin[]>([]);
@@ -209,10 +217,19 @@ export default function App() {
     }
   }, [cameraActive, cameraStream]);
 
-  // Attempt to initialize camera automatically on mount
+  // Attempt to initialize camera automatically after 30 seconds if not already active or captured
   useEffect(() => {
-    initCamera();
+    const timer = setTimeout(() => {
+      if (!cameraActive && !chefCapturedPhoto) {
+        initCamera();
+      }
+    }, 30000); // 30 seconds delay
 
+    return () => clearTimeout(timer);
+  }, [cameraActive, chefCapturedPhoto]);
+
+  // Handle other mounting configurations (bubbles, client, logo maker)
+  useEffect(() => {
     // Generate very subtle, high-class slow drifting ambient lights/bubbles
     const initialBubbles = Array.from({ length: 8 }).map((_, i) => ({
       id: i,
@@ -384,6 +401,9 @@ export default function App() {
     // Quality boosts
     setBakeQuality((prev) => Math.min(180, prev + 15));
 
+    // Add to visual ingredients inside the oven
+    setAddedIngredients((prev) => [...prev, emoji]);
+
     // Projectile starting point
     const newIng: FlyingIngredient = {
       id: Date.now() + Math.random(),
@@ -471,25 +491,105 @@ export default function App() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         
+        // 1. Draw mirrored live stream video
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-        // Chef Hat Overlay rendering on canvas
-        if (chefHatEnabled) {
-          ctx.font = `${canvas.height * 0.28}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          // Draw chef hat emoji slightly above head center
-          ctx.fillText('👨‍🍳', canvas.width / 2, canvas.height * 0.24);
+        // Get the CLEAN raw photo (without chef hat, stamps, stickers, or filters) for settings/database
+        const cleanDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+        // 2. Apply chosen live camera filter color grading on the canvas itself (for the beautiful frozen display)
+        if (selectedFilter === 'warm') {
+          ctx.fillStyle = 'rgba(251, 146, 60, 0.12)'; // warm cozy amber tint
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = 'rgba(120, 53, 4, 0.05)'; // slight vignette warmth
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else if (selectedFilter === 'gold') {
+          ctx.fillStyle = 'rgba(234, 179, 8, 0.15)'; // deep gold
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // Vintage dark vignette
+          const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height/3, canvas.width/2, canvas.height/2, canvas.width/2);
+          gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+          gradient.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else if (selectedFilter === 'neon') {
+          ctx.fillStyle = 'rgba(139, 92, 246, 0.12)'; // violet-magenta overlay
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+          gradient.addColorStop(0, 'rgba(6, 182, 212, 0.1)'); // neon cyan
+          gradient.addColorStop(1, 'rgba(236, 72, 153, 0.1)'); // neon pink
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
+        // 3. Draw Chef Hat Overlay based on user-configured sliders
+        if (chefHatEnabled) {
+          const size = canvas.height * 0.24 * chefHatScale;
+          ctx.font = `${size}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          const posX = canvas.width / 2 + (chefHatX / 100) * canvas.width;
+          const posY = (chefHatY / 100) * canvas.height;
+          
+          ctx.save();
+          // Add drop shadow under the emoji hat
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+          ctx.shadowBlur = 12;
+          ctx.shadowOffsetY = 8;
+          ctx.fillText('👨‍🍳', posX, posY);
+          ctx.restore();
+        }
+
+        // 4. Draw decorative "Chef Studio" restaurant frame overlay
+        // Elegant translucent bar at the bottom with restaurant branding
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+        ctx.fillRect(0, canvas.height - 42, canvas.width, 42);
+        
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height - 42);
+        ctx.lineTo(canvas.width, canvas.height - 42);
+        ctx.stroke();
+
+        // Left text: Branding
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👨‍🍳 MAGIC OVEN - CHEF STUDIO', 16, canvas.height - 21);
+
+        // Right text: Item Type / Live marker
+        ctx.fillStyle = '#10b981';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`LIVE CAPTURE: ${itemType?.toUpperCase() || 'OFFICIAL'}`, canvas.width - 16, canvas.height - 21);
+
+        // Corner food stickers for high-class bakery decoration
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🥐', 28, 32);
+        ctx.fillText('🥖', canvas.width - 28, 32);
+
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setChefCapturedPhoto(dataUrl);
+
+        // Stop the camera stream to stop transmission and turn off user camera light
+        if (video.srcObject) {
+          const stream = video.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+        }
+        setCameraStream(null);
+        setCameraActive(false);
         
         // Save to local IndexedDB
         await saveCapture({
-          photo: dataUrl,
+          photo: cleanDataUrl, // Clean photo without filters/overlays for Settings / Gallery!
           timestamp: Date.now(),
           itemType: itemType,
           temperature: temperature,
@@ -498,7 +598,7 @@ export default function App() {
 
         // Save to Shared Cloud Server (for code "2007" sharing)
         await saveCaptureToServer({
-          photo: dataUrl,
+          photo: cleanDataUrl, // Clean photo without filters/overlays for Settings / Gallery!
           timestamp: Date.now(),
           itemType: itemType,
           temperature: temperature,
@@ -527,6 +627,9 @@ export default function App() {
   const handleStartBaking = () => {
     if (isBaking) return;
     playButtonPress();
+    
+    // Clear any previous ingredients so we start fresh!
+    setAddedIngredients([]);
     
     capturePhoto(false);
 
@@ -703,64 +806,12 @@ export default function App() {
 
         {/* Header Controls */}
         <div className="flex flex-wrap items-center justify-end gap-3.5">
-          {/* Auth Controls */}
-          {user ? ( 
-            <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-900/60 px-3 py-1.5 rounded-xl text-slate-300 shadow-sm">
-              <img 
-                src={user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`}
-                alt={user.displayName || "User"}
-                className="w-5 h-5 rounded-full border border-slate-800" 
-              />
-              <div className="hidden md:flex flex-col text-right leading-none">
-                <span className="text-[9px] font-bold text-slate-200">{user.displayName || user.email}</span>
-                <span className="text-[7px] text-emerald-400">متصل</span>
-              </div>
-              <button
-                onClick={async () => {
-                  playButtonPress();
-                  await signOut(auth);
-                }}
-                className="text-[9px] font-bold bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-red-400 px-2 py-0.5 rounded border border-slate-800 cursor-pointer transition-all"
-              >
-                خروج
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={async () => {
-                playButtonPress();
-                try {
-                  const result = await signInWithPopup(auth, googleAuthProvider);
-                  const credential = GoogleAuthProvider.credentialFromResult(result);
-                  if (credential?.accessToken) {
-                    setGoogleAccessToken(credential.accessToken);
-                  }
-                } catch (err) {
-                  console.error("Firebase Sign-In failed:", err);
-                }
-              }}
-              className="px-3 py-1.5 bg-gradient-to-l from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 active:scale-95 text-white text-[11px] font-bold rounded-xl transition-all shadow-[0_2px_10px_rgba(249,115,22,0.15)] flex items-center gap-1.5 border border-orange-500/10 cursor-pointer"
-            >
-              <span>تسجيل الدخول</span>
-              <ChefHat className="w-3.5 h-3.5" />
-            </button>
-          )}
 
           {/* Gold Coin Panel */}
           <div className="flex items-center gap-2 bg-slate-950/90 border border-yellow-500/30 px-3.5 py-1.5 rounded-xl text-yellow-400 font-mono shadow-[0_0_15px_rgba(234,179,8,0.15)]">
             <span className="text-sm font-bold tracking-wide">{coins}</span>
             <Coins className="w-4.5 h-4.5 fill-current" />
           </div>
-
-          {/* Google Drive Cloud Button */}
-          <button
-            onClick={() => { playButtonPress(); setShowDriveDashboard(true); }}
-            className="p-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-400 hover:text-blue-400 rounded-xl border border-slate-900 transition-all active:scale-95 shadow-sm flex items-center gap-1.5 cursor-pointer"
-            title="نسخ احتياطي Google Drive"
-          >
-            <Cloud className="w-4.5 h-4.5 text-blue-400" />
-            <span className="hidden md:inline text-[10px] font-bold text-slate-300">سحابة درايف</span>
-          </button>
 
           <button
             onClick={() => { playButtonPress(); setShowSettings(true); }}
@@ -960,39 +1011,146 @@ export default function App() {
               التقط صورة رسمية لمطعمك وأنت ترتدي قبعة الشيف السحرية لمشاركتها مع جميع اللاعبين عالمياً!
             </p>
 
-            {/* Smart Chef Hat Filter Toggle */}
-            <label className="flex flex-row-reverse items-center justify-between cursor-pointer p-2.5 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-900/50 transition-all">
-              <span className="text-xs text-slate-200 font-semibold">تفعيل فلتر قبعة الشيف 👨‍🍳</span>
-              <input
-                type="checkbox"
-                checked={chefHatEnabled}
-                onChange={(e) => { playButtonPress(); setChefHatEnabled(e.target.checked); }}
-                className="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
-              />
-            </label>
+            {/* Smart Chef Hat Filter Toggle & Live Filters Selector */}
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-row-reverse items-center justify-between cursor-pointer p-2.5 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-900/50 transition-all">
+                <span className="text-xs text-slate-200 font-semibold flex items-center gap-1.5">
+                  تفعيل فلتر قبعة الشيف 👨‍🍳
+                </span>
+                <input
+                  type="checkbox"
+                  checked={chefHatEnabled}
+                  onChange={(e) => { playButtonPress(); setChefHatEnabled(e.target.checked); }}
+                  className="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                />
+              </label>
+
+              {/* Advanced Restaurant Environment Filters selector */}
+              <div className="flex flex-col gap-1.5 bg-slate-900/30 p-2.5 border border-slate-900 rounded-xl">
+                <div className="flex flex-row-reverse justify-between text-[10px] text-slate-400 font-bold">
+                  <span>اختر جو وخلفية المطعم 🌟</span>
+                  <span className="text-amber-500">فلاتر البث الحي</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { id: 'normal', name: 'افتراضي 📷' },
+                    { id: 'warm', name: 'مطعم دافئ 🥐' },
+                    { id: 'gold', name: 'كلاسيك ذهبي 🎞️' },
+                    { id: 'neon', name: 'شيف سايبر ⚡' }
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => { playButtonPress(); setSelectedFilter(f.id as any); }}
+                      className={`py-1.5 rounded-lg text-[9px] font-bold border transition-all ${
+                        selectedFilter === f.id
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md scale-[1.03]'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             {/* Live Camera Feed Panel */}
-            <div className="relative border border-slate-800 rounded-xl overflow-hidden aspect-video bg-slate-950 flex flex-col items-center justify-center group shadow-inner">
-              {cameraActive ? (
-                <div className="relative w-full h-full">
+            <div className="relative border-2 border-slate-800 rounded-2xl overflow-hidden aspect-video bg-slate-950 flex flex-col items-center justify-center group shadow-2xl">
+              {chefCapturedPhoto ? (
+                <div className="relative w-full h-full overflow-hidden animate-fadeIn">
+                  {/* The captured frozen photo */}
+                  <img
+                    src={chefCapturedPhoto}
+                    alt="صورة الشيف المجمدة"
+                    className="w-full h-full object-cover transition-all duration-300"
+                  />
+                  
+                  {/* Decorative stickers or badges on the captured image */}
+                  <div className="absolute top-4 right-4 z-10 bg-emerald-600/90 backdrop-blur-sm border border-emerald-400 text-[10px] font-bold px-2.5 py-1 rounded-full text-white shadow-lg flex items-center gap-1">
+                    <span>صورة الطاهي المعتمدة 👑</span>
+                  </div>
+                  
+                  <div className="absolute top-4 left-4 z-10 flex gap-2 pointer-events-none">
+                    <span className="text-xl filter drop-shadow-md select-none animate-pulse">⭐</span>
+                    <span className="text-xl filter drop-shadow-md select-none animate-pulse" style={{ animationDelay: '0.5s' }}>🧁</span>
+                  </div>
+
+                  {/* Translucent Studio bottom border info */}
+                  <div className="absolute bottom-0 inset-x-0 h-8 bg-slate-950/70 border-t border-emerald-500/30 flex items-center justify-between px-3 text-[9px] text-emerald-400 z-10 pointer-events-none font-mono">
+                    <span>صورة مجمدة ومحمية بنجاح</span>
+                    <span className="text-emerald-400 font-bold font-mono">SAVED CLEAN IN SETTINGS</span>
+                  </div>
+
+                  {/* Gentle flashing flash-success effect overlay */}
+                  <div className="absolute inset-0 bg-white/5 pointer-events-none animate-pulse" style={{ animationDuration: '3.5s' }} />
+                </div>
+              ) : cameraActive ? (
+                <div className="relative w-full h-full overflow-hidden">
+                  {/* Glowing overhead kitchen fairy lights */}
+                  {selectedFilter !== 'normal' && (
+                    <div className="absolute top-0 inset-x-0 h-8 bg-gradient-to-b from-amber-500/20 via-amber-500/5 to-transparent z-10 pointer-events-none flex justify-around px-8">
+                      <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse shadow-[0_0_8px_#f59e0b]"></span>
+                      <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse shadow-[0_0_8px_#f59e0b]" style={{ animationDelay: '0.5s' }}></span>
+                      <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_8px_#f59e0b]" style={{ animationDelay: '1s' }}></span>
+                      <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse shadow-[0_0_8px_#f59e0b]" style={{ animationDelay: '1.5s' }}></span>
+                    </div>
+                  )}
+
+                  {/* Corner Bakery Silhouette Stamps to simulate background/cooking studio */}
+                  <div className="absolute top-4 right-4 z-10 bg-slate-900/80 backdrop-blur-sm border border-slate-800 text-[11px] font-bold px-2.5 py-1 rounded-full text-white shadow-lg flex items-center gap-1.5 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                    <span>استوديو الطهي 🔴</span>
+                  </div>
+
+                  <div className="absolute top-4 left-4 z-10 flex gap-2 pointer-events-none">
+                    <span className="text-xl filter drop-shadow-md select-none animate-bounce" style={{ animationDuration: '3s' }}>🥐</span>
+                    <span className="text-xl filter drop-shadow-md select-none animate-bounce" style={{ animationDuration: '4s', animationDelay: '1s' }}>🥖</span>
+                  </div>
+
                   <video
                     ref={videoRef}
-                    className="w-full h-full object-cover scale-x-[-1] transition-transform duration-500"
+                    className="w-full h-full object-cover scale-x-[-1] transition-all duration-300"
+                    style={{
+                      filter: 
+                        selectedFilter === 'warm'
+                          ? 'sepia(0.18) saturate(1.3) contrast(1.05) brightness(1.02)'
+                          : selectedFilter === 'gold'
+                          ? 'sepia(0.35) saturate(1.25) contrast(1.1) brightness(0.95)'
+                          : selectedFilter === 'neon'
+                          ? 'hue-rotate(60deg) saturate(1.4) contrast(1.1) brightness(1.05)'
+                          : 'none'
+                    }}
                     playsInline
                     muted
                   />
-                  {/* Bouncing Chef Hat HTML Overlay */}
+
+                  {/* Interactive Customizable Chef Hat HTML Overlay */}
                   {chefHatEnabled && (
                     <div 
-                      className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-7xl select-none pointer-events-none drop-shadow-[0_8px_12px_rgba(0,0,0,0.65)] animate-bounce"
-                      style={{ animationDuration: '3.5s' }}
+                      className="absolute select-none pointer-events-none drop-shadow-[0_10px_15px_rgba(0,0,0,0.7)]"
+                      style={{ 
+                        left: '50%',
+                        transform: `translateX(-50%) translate(${chefHatX}%, 0)`,
+                        top: `${chefHatY}%`,
+                        fontSize: `${6.5 * chefHatScale}rem`,
+                        transition: 'transform 0.1s ease-out, top 0.1s ease-out, font-size 0.1s ease-out'
+                      }}
                     >
                       👨‍🍳
                     </div>
                   )}
-                  {/* Real-time Head Alignment Guide */}
+
+                  {/* Real-time Alignment head guide frame overlay */}
                   <div className="absolute inset-0 border border-dashed border-slate-500/10 pointer-events-none flex items-center justify-center">
-                    <div className="w-24 h-24 rounded-full border border-dashed border-emerald-500/15" />
+                    <div className="w-28 h-28 rounded-full border border-dashed border-amber-500/20 flex items-center justify-center">
+                      <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">ALIGN HEAD</span>
+                    </div>
+                  </div>
+
+                  {/* Translucent Studio bottom border info */}
+                  <div className="absolute bottom-0 inset-x-0 h-8 bg-slate-950/70 border-t border-amber-500/30 flex items-center justify-between px-3 text-[9px] text-slate-400 z-10 pointer-events-none font-mono">
+                    <span>BAKERY PHOTO BOOTH v2.0</span>
+                    <span className="text-amber-500 font-bold">FILTER: {selectedFilter.toUpperCase()}</span>
                   </div>
                 </div>
               ) : (
@@ -1011,26 +1169,102 @@ export default function App() {
               )}
             </div>
 
+            {/* Chef Hat Real-Time Alignment Controls (Only shown if hat filter is active) */}
+            {chefHatEnabled && cameraActive && (
+              <div className="bg-slate-900/30 border border-slate-900 rounded-xl p-3 flex flex-col gap-2.5 animate-fadeIn">
+                <div className="flex flex-row-reverse justify-between items-center text-[10px] text-slate-400 font-bold border-b border-slate-900 pb-1.5">
+                  <span className="text-amber-400">🔧 أشرطة ضبط وموازنة قبعة الشيف السحرية</span>
+                  <button 
+                    onClick={() => {
+                      playButtonPress();
+                      setChefHatX(0);
+                      setChefHatY(15);
+                      setChefHatScale(1.2);
+                    }}
+                    className="text-[8px] text-slate-500 hover:text-slate-300 underline"
+                  >
+                    إعادة تعيين الافتراضي
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[10px]">
+                  {/* Height Position */}
+                  <div className="flex flex-col gap-1 text-right">
+                    <span className="text-slate-400">الارتفاع العمودي: <span className="text-amber-500 font-mono font-bold">{chefHatY}%</span></span>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="80" 
+                      value={chefHatY} 
+                      onChange={(e) => setChefHatY(Number(e.target.value))}
+                      className="w-full accent-amber-500 bg-slate-900 h-1 rounded-lg cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Horizontal Position */}
+                  <div className="flex flex-col gap-1 text-right">
+                    <span className="text-slate-400">الموقع الأفقي: <span className="text-amber-500 font-mono font-bold">{chefHatX}%</span></span>
+                    <input 
+                      type="range" 
+                      min="-40" 
+                      max="40" 
+                      value={chefHatX} 
+                      onChange={(e) => setChefHatX(Number(e.target.value))}
+                      className="w-full accent-amber-500 bg-slate-900 h-1 rounded-lg cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Scale Size */}
+                  <div className="flex flex-col gap-1 text-right">
+                    <span className="text-slate-400">حجم القبعة: <span className="text-amber-500 font-mono font-bold">{chefHatScale.toFixed(1)}x</span></span>
+                    <input 
+                      type="range" 
+                      min="0.5" 
+                      max="2.5" 
+                      step="0.05"
+                      value={chefHatScale} 
+                      onChange={(e) => setChefHatScale(Number(e.target.value))}
+                      className="w-full accent-amber-500 bg-slate-900 h-1 rounded-lg cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Snap Action Button */}
-            <button
-              onClick={async () => {
-                if (!cameraActive) {
+            {chefCapturedPhoto ? (
+              <button
+                onClick={() => {
                   playButtonPress();
+                  setChefCapturedPhoto(null);
                   initCamera();
-                  return;
-                }
-                playButtonPress();
-                setFlashActive(true);
-                setTimeout(() => setFlashActive(false), 150);
-                await capturePhoto(true);
-                triggerConfetti();
-                alert("🎉 تم التقاط صورة الشيف الرسمية بنجاح ومشاركتها سحابياً! أدخل الرمز 2007 في الإعدادات المتقدمة لتصفح المعرض السحابي العام.");
-              }}
-              className="py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2 border border-emerald-400/10"
-            >
-              <Camera className="w-4 h-4 fill-current" />
-              <span>التقط ومشاركة الصورة الرسمية للمطعم 🌟</span>
-            </button>
+                }}
+                className="py-2.5 px-4 bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(245,158,11,0.2)] flex items-center justify-center gap-2 border border-yellow-400/10 cursor-pointer"
+              >
+                <Camera className="w-4 h-4" />
+                <span>التقاط صورة جديدة 📷</span>
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  if (!cameraActive) {
+                    playButtonPress();
+                    initCamera();
+                    return;
+                  }
+                  playButtonPress();
+                  setFlashActive(true);
+                  setTimeout(() => setFlashActive(false), 150);
+                  await capturePhoto(true);
+                  triggerConfetti();
+                  alert("🎉 تم التقاط صورة الشيف الرسمية بنجاح ومشاركتها سحابياً! أدخل الرمز 2007 في الإعدادات المتقدمة لتصفح المعرض السحابي العام.");
+                }}
+                className="py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2 border border-emerald-400/10 cursor-pointer"
+              >
+                <Camera className="w-4 h-4 fill-current" />
+                <span>التقاط ومشاركة الصورة الرسمية للمطعم 🌟</span>
+              </button>
+            )}
           </div>
 
         </div>
@@ -1058,6 +1292,7 @@ export default function App() {
             bakeProgress={bakeProgress}
             itemType={itemType}
             showSteam={steamMode}
+            addedIngredients={addedIngredients}
           />
 
           {/* Oven heat control & slider */}
@@ -1161,20 +1396,6 @@ export default function App() {
             isOfficial: true
           }, authToken).catch((err) => console.warn('Saving logo to server failed:', err));
         }}
-      />
-
-      {/* Google Drive Integration Dashboard Modal */}
-      <GoogleDriveDashboard
-        isOpen={showDriveDashboard}
-        onClose={() => setShowDriveDashboard(false)}
-        coins={coins}
-        setCoins={setCoins}
-        restaurantLogo={restaurantLogo}
-        setRestaurantLogo={setRestaurantLogo}
-        googleAccessToken={googleAccessToken}
-        setGoogleAccessToken={setGoogleAccessToken}
-        user={user}
-        handleLogin={handleGoogleLoginForDrive}
       />
 
       {/* Simplified clean footer */}

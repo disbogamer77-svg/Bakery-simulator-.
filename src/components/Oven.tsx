@@ -7,6 +7,7 @@ interface OvenProps {
   bakeProgress: number; // 0 - 100
   itemType: 'bread' | 'pizza' | 'croissant' | 'cake' | 'cookie' | 'pie' | 'dough' | 'hamburger';
   showSteam: boolean;
+  addedIngredients?: string[];
 }
 
 export const Oven: React.FC<OvenProps> = ({
@@ -15,6 +16,7 @@ export const Oven: React.FC<OvenProps> = ({
   bakeProgress,
   itemType,
   showSteam,
+  addedIngredients = [],
 }) => {
   // Let's map oven heat level to color intensity of the heat coil
   const getCoilColor = () => {
@@ -122,6 +124,7 @@ export const Oven: React.FC<OvenProps> = ({
             type={itemType}
             bakeProgress={bakeProgress}
             isBaking={isBaking}
+            addedIngredients={addedIngredients}
             className="w-full h-full transform scale-110"
           />
         </div>

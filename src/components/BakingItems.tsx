@@ -5,9 +5,10 @@ interface BakingItemProps {
   bakeProgress: number; // 0 to 100
   isBaking: boolean;
   className?: string;
+  addedIngredients?: string[];
 }
 
-export const BakingItem: React.FC<BakingItemProps> = ({ type, bakeProgress, isBaking, className = "" }) => {
+const BakingItemBase: React.FC<BakingItemProps> = ({ type, bakeProgress, isBaking, className = "" }) => {
   // We use detailed linear/radial gradients defined dynamically per item to convey realistic roasting & depth.
 
   if (type === 'bread') {
@@ -871,4 +872,50 @@ export const BakingItem: React.FC<BakingItemProps> = ({ type, bakeProgress, isBa
   }
 
   return null;
+};
+
+export const BakingItem: React.FC<BakingItemProps> = (props) => {
+  const { addedIngredients = [] } = props;
+
+  const positions = [
+    { top: '48%', left: '42%' },
+    { top: '55%', left: '55%' },
+    { top: '62%', left: '30%' },
+    { top: '42%', left: '60%' },
+    { top: '68%', left: '48%' },
+    { top: '50%', left: '25%' },
+    { top: '38%', left: '45%' },
+    { top: '58%', left: '68%' },
+    { top: '70%', left: '35%' },
+    { top: '40%', left: '30%' },
+  ];
+
+  return (
+    <div className="relative w-full h-full">
+      <BakingItemBase {...props} />
+      
+      {addedIngredients && addedIngredients.length > 0 && (
+        <div className="absolute inset-0 pointer-events-none z-30">
+          {addedIngredients.map((emoji, index) => {
+            const pos = positions[index % positions.length];
+            return (
+              <div
+                key={index}
+                className="absolute text-2xl select-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)] animate-pulse transition-all duration-500"
+                style={{
+                  top: pos.top,
+                  left: pos.left,
+                  transform: `translate(-50%, -50%) rotate(${(index * 35) % 360}deg) scale(1.15)`,
+                  animationDelay: `${index * 0.15}s`,
+                  animationDuration: '2s',
+                }}
+              >
+                {emoji}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 };

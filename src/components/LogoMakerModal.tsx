@@ -56,9 +56,8 @@ export function LogoMakerModal({ onClose, onSave, isOpen }: LogoMakerModalProps)
 
   // Handle load / trigger camera
   useEffect(() => {
-    if (isOpen) {
-      startCamera();
-    }
+    // We do not start the camera automatically anymore to prevent immediate permission prompts.
+    // The user can activate it manually by clicking the "تنشيط كاميرا الشيف" button.
     return () => {
       stopCamera();
     };
