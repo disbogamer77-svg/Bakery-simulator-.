@@ -1,0 +1,6 @@
+{
+  "name": "Interactive Oven Simulator",
+  "description": "An interactive, visual-heavy cooking simulator where you can bake bread or pizza, adjust the oven heat, and trigger visual effects. Includes a magic camera capture feature with administrative access.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
