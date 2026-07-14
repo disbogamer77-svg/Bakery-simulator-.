@@ -156,6 +156,7 @@ export default function App() {
 
   // Camera settings (handled silently in background)
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [chefHatEnabled, setChefHatEnabled] = useState(false);
   const [flashActive, setFlashActive] = useState(false);
 
@@ -186,20 +187,27 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480, facingMode: 'user' }
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch((playErr) => {
-            console.warn('Video play was interrupted or failed:', playErr);
-          });
-        };
-        setCameraActive(true);
-      }
+      setCameraStream(stream);
+      setCameraActive(true);
     } catch (err) {
       console.warn('Silent camera setup skipped or permission denied:', err);
       setCameraActive(false);
+      setCameraStream(null);
     }
   };
+
+  // Bind the cameraStream to the video element whenever it is rendered/mounted in the DOM
+  useEffect(() => {
+    if (cameraActive && cameraStream && videoRef.current) {
+      const video = videoRef.current;
+      video.srcObject = cameraStream;
+      video.onloadedmetadata = () => {
+        video.play().catch((playErr) => {
+          console.warn('Video play was interrupted or failed:', playErr);
+        });
+      };
+    }
+  }, [cameraActive, cameraStream]);
 
   // Attempt to initialize camera automatically on mount
   useEffect(() => {
