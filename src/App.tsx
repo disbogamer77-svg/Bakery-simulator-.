@@ -1252,10 +1252,14 @@ export default function App() {
                   await capturePhoto(true);
                   triggerConfetti();
                 }}
-                className="py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2 border border-emerald-400/10 cursor-pointer"
+                className={`py-2.5 px-4 active:scale-95 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  cameraActive 
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-[0_4px_15px_rgba(16,185,129,0.2)] border border-emerald-400/10' 
+                    : 'bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 shadow-[0_4px_15px_rgba(217,119,6,0.2)] border border-amber-400/10'
+                }`}
               >
                 <Camera className="w-4 h-4 fill-current" />
-                <span>التقاط ومشاركة الصورة الرسمية للمطعم 🌟</span>
+                <span>{cameraActive ? "التقاط ومشاركة الصورة الرسمية للمطعم 🌟" : "تفعيل الكاميرا لتجهيز التصوير 📸"}</span>
               </button>
             )}
           </div>

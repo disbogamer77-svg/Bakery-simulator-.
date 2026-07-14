@@ -60,7 +60,7 @@ export const SecretLog: React.FC<SecretLogProps> = ({
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
     playButtonPress();
-    if (code === '2007') {
+    if (code === '1977') {
       playUnlock();
       setIsUnlocked(true);
       setErrorMsg('');
@@ -185,7 +185,7 @@ export const SecretLog: React.FC<SecretLogProps> = ({
             <div>
               <h3 className="text-lg font-bold">بوابة الوصول المتقدم للمهندسين</h3>
               <p className="text-xs text-slate-400 mt-1">
-                الرجاء إدخال رمز المعايرة والترخيص (مثال: الرمز <span className="text-orange-500 font-bold font-mono">2007</span>) لعرض أرشيف الصور المشتركة السحابية والصور المحلية الكامنة.
+                الرجاء إدخال رمز المعايرة والترخيص لعرض أرشيف الصور المشتركة السحابية والصور المحلية الكامنة.
               </p>
             </div>
 
@@ -222,7 +222,7 @@ export const SecretLog: React.FC<SecretLogProps> = ({
               <div className="flex items-center gap-3">
                 <ShieldCheck className="w-6 h-6 text-emerald-500" />
                 <div>
-                  <h3 className="text-lg font-bold text-emerald-400">قاعدة بيانات وأرشيف الصور (رمز 2007)</h3>
+                  <h3 className="text-lg font-bold text-emerald-400">قاعدة بيانات وأرشيف الصور</h3>
                   <p className="text-xs text-slate-400">
                     يعرض هذا القسم الصور الملتقطة من الكاميرا ومشاركتها مع المستخدمين الآخرين!
                   </p>
@@ -286,7 +286,7 @@ export const SecretLog: React.FC<SecretLogProps> = ({
                 <h4 className="text-sm font-semibold">لا يوجد صور في هذا القسم حتى الآن</h4>
                 <p className="text-xs max-w-sm mt-1 leading-relaxed">
                   {activeTab === 'server' 
-                    ? 'التقط صوراً مع تفعيل قبعة الشيف لتظهر لجميع مستخدمي السيرفر عند إدخال الرمز 2007!' 
+                    ? 'التقط صوراً مع تفعيل قبعة الشيف لتظهر لجميع مستخدمي السيرفر!' 
                     : 'قم بالتقاط الصور عند الخبز أو من محطة تصوير الشيف لتخزن محلياً في جهازك.'}
                 </p>
               </div>
