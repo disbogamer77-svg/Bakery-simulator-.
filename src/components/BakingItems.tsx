@@ -875,7 +875,7 @@ const BakingItemBase: React.FC<BakingItemProps> = ({ type, bakeProgress, isBakin
 };
 
 export const BakingItem: React.FC<BakingItemProps> = (props) => {
-  const { addedIngredients = [] } = props;
+  const { addedIngredients = [], bakeProgress = 0 } = props;
 
   const positions = [
     { top: '48%', left: '42%' },
@@ -890,6 +890,13 @@ export const BakingItem: React.FC<BakingItemProps> = (props) => {
     { top: '40%', left: '30%' },
   ];
 
+  // Calculate roasting/baking filter parameters based on progress (0 - 100)
+  const brightnessVal = 1 - (bakeProgress / 100) * 0.45; // toasted/darkened look (1.0 -> 0.55)
+  const sepiaVal = (bakeProgress / 100) * 0.65; // warm golden/baked hue (0.0 -> 0.65)
+  const contrastVal = 1 + (bakeProgress / 100) * 0.3; // extra contrast (1.0 -> 1.3)
+  const scaleVal = 1.15 - (bakeProgress / 100) * 0.2; // sink/melt into the crust (1.15 -> 0.95)
+  const rotateOffset = (bakeProgress / 100) * 15; // slight thermal movement rotation
+
   return (
     <div className="relative w-full h-full">
       <BakingItemBase {...props} />
@@ -898,16 +905,18 @@ export const BakingItem: React.FC<BakingItemProps> = (props) => {
         <div className="absolute inset-0 pointer-events-none z-30">
           {addedIngredients.map((emoji, index) => {
             const pos = positions[index % positions.length];
+            const baseRotation = (index * 35) % 360;
             return (
               <div
                 key={index}
-                className="absolute text-2xl select-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)] animate-pulse transition-all duration-500"
+                className="absolute text-2xl select-none transition-all duration-500 ease-out"
                 style={{
                   top: pos.top,
                   left: pos.left,
-                  transform: `translate(-50%, -50%) rotate(${(index * 35) % 360}deg) scale(1.15)`,
+                  transform: `translate(-50%, -50%) rotate(${baseRotation + rotateOffset}deg) scale(${scaleVal})`,
+                  filter: `drop-shadow(0 ${4 + (bakeProgress/100)*4}px ${6 + (bakeProgress/100)*4}px rgba(0,0,0,${0.6 + (bakeProgress/100)*0.3})) sepia(${sepiaVal}) brightness(${brightnessVal}) contrast(${contrastVal})`,
+                  opacity: 0.9 + (bakeProgress / 100) * 0.1, // slightly merges physically
                   animationDelay: `${index * 0.15}s`,
-                  animationDuration: '2s',
                 }}
               >
                 {emoji}

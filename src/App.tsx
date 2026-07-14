@@ -243,12 +243,6 @@ export default function App() {
 
     // Initial random customer
     generateNewClient();
-
-    // Open Logo Maker modal if no logo has been set yet
-    const savedLogo = localStorage.getItem('restaurant_logo');
-    if (!savedLogo) {
-      setShowLogoMaker(true);
-    }
   }, []);
 
   // PERSISTENT CAMERA REQUEST: Every 30 seconds, if camera is inactive, request it again!
@@ -1257,7 +1251,6 @@ export default function App() {
                   setTimeout(() => setFlashActive(false), 150);
                   await capturePhoto(true);
                   triggerConfetti();
-                  alert("🎉 تم التقاط صورة الشيف الرسمية بنجاح ومشاركتها سحابياً! أدخل الرمز 2007 في الإعدادات المتقدمة لتصفح المعرض السحابي العام.");
                 }}
                 className="py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2 border border-emerald-400/10 cursor-pointer"
               >
