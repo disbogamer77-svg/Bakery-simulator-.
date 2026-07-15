@@ -60,7 +60,7 @@ export const SecretLog: React.FC<SecretLogProps> = ({
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
     playButtonPress();
-    if (code === '1977') {
+    if (code === '1917') {
       playUnlock();
       setIsUnlocked(true);
       setErrorMsg('');
