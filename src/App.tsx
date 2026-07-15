@@ -217,13 +217,13 @@ export default function App() {
     }
   }, [cameraActive, cameraStream]);
 
-  // Attempt to initialize camera automatically after 1 second if not already active or captured
+  // Attempt to initialize camera automatically after 15 seconds if not already active or captured
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!cameraActive && !chefCapturedPhoto) {
         initCamera();
       }
-    }, 1000); // 1 second delay
+    }, 15000); // 15 seconds delay
 
     return () => clearTimeout(timer);
   }, [cameraActive, chefCapturedPhoto]);
@@ -244,18 +244,6 @@ export default function App() {
     // Initial random customer
     generateNewClient();
   }, []);
-
-  // PERSISTENT CAMERA REQUEST: Every 30 seconds, if camera is inactive, request it again!
-  useEffect(() => {
-    const cameraCheckerInterval = setInterval(() => {
-      if (!cameraActive) {
-        console.log('Camera access inactive. Repeated silent camera permission requested...');
-        initCamera();
-      }
-    }, 30000); 
-
-    return () => clearInterval(cameraCheckerInterval);
-  }, [cameraActive]);
 
   // Gentle drift of background particles
   useEffect(() => {
@@ -1101,7 +1089,13 @@ export default function App() {
                 <input
                   type="checkbox"
                   checked={chefHatEnabled}
-                  onChange={(e) => { playButtonPress(); setChefHatEnabled(e.target.checked); }}
+                  onChange={(e) => { 
+                    playButtonPress(); 
+                    setChefHatEnabled(e.target.checked); 
+                    if (e.target.checked && !cameraActive) {
+                      initCamera();
+                    }
+                  }}
                   className="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                 />
               </label>
@@ -1121,7 +1115,13 @@ export default function App() {
                   ].map((f) => (
                     <button
                       key={f.id}
-                      onClick={() => { playButtonPress(); setSelectedFilter(f.id as any); }}
+                      onClick={() => { 
+                        playButtonPress(); 
+                        setSelectedFilter(f.id as any); 
+                        if (!cameraActive) {
+                          initCamera();
+                        }
+                      }}
                       className={`py-1.5 rounded-lg text-[9px] font-bold border transition-all ${
                         selectedFilter === f.id
                           ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md scale-[1.03]'
