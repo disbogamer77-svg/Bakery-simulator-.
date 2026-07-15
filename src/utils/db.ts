@@ -129,71 +129,146 @@ export async function clearAllCaptures(): Promise<void> {
   }
 }
 
-// Global Cloud Sharing APIs for user-to-user photo sharing via code "2007"
-export async function saveCaptureToServer(capture: Omit<CapturedPhoto, 'id'>, token?: string | null): Promise<CapturedPhoto | null> {
+// Global Cloud Sharing APIs for user-to-user photo sharing via Firestore
+import { db, auth } from '../lib/firebase';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDocs, 
+  deleteDoc, 
+  getDocFromServer 
+} from 'firebase/firestore';
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// CRITICAL CONSTRAINT: When the application initially boots, call getFromServer to test the connection.
+async function testConnection() {
   try {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
     }
-    const response = await fetch('/api/captures', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(capture)
-    });
-    if (!response.ok) throw new Error('Failed to save photo to cloud server');
-    return await response.json();
+  }
+}
+testConnection();
+
+export async function saveCaptureToServer(capture: Omit<CapturedPhoto, 'id'>, _token?: string | null): Promise<CapturedPhoto | null> {
+  const id = Date.now() + Math.floor(Math.random() * 1000);
+  const path = `captures/${id}`;
+  try {
+    const docRef = doc(db, 'captures', String(id));
+    const payload = {
+      photo: capture.photo,
+      timestamp: capture.timestamp,
+      itemType: capture.itemType,
+      temperature: capture.temperature,
+      isOfficial: !!capture.isOfficial,
+      userId: auth.currentUser?.uid || null
+    };
+    await setDoc(docRef, payload);
+    return { id, ...payload };
   } catch (err) {
-    console.error('Failed to save capture to server:', err);
+    handleFirestoreError(err, OperationType.CREATE, path);
     return null;
   }
 }
 
-export async function getCapturesFromServer(token?: string | null): Promise<CapturedPhoto[]> {
+export async function getCapturesFromServer(_token?: string | null): Promise<CapturedPhoto[]> {
+  const path = 'captures';
   try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch('/api/captures', { headers });
-    if (!response.ok) throw new Error('Failed to get captures from cloud server');
-    return await response.json();
+    const q = collection(db, 'captures');
+    const snapshot = await getDocs(q);
+    const results: CapturedPhoto[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      results.push({
+        id: Number(doc.id),
+        photo: data.photo,
+        timestamp: data.timestamp,
+        itemType: data.itemType as any,
+        temperature: data.temperature,
+        isOfficial: data.isOfficial,
+      });
+    });
+    return results;
   } catch (err) {
-    console.error('Failed to get captures from server:', err);
+    handleFirestoreError(err, OperationType.LIST, path);
     return [];
   }
 }
 
-export async function clearCapturesOnServer(token?: string | null): Promise<boolean> {
+export async function clearCapturesOnServer(_token?: string | null): Promise<boolean> {
+  const path = 'captures';
   try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch('/api/captures/clear', { 
-      method: 'POST',
-      headers
+    const q = collection(db, 'captures');
+    const snapshot = await getDocs(q);
+    const deletePromises: Promise<void>[] = [];
+    snapshot.forEach((doc) => {
+      deletePromises.push(deleteDoc(doc.ref));
     });
-    return response.ok;
+    await Promise.all(deletePromises);
+    return true;
   } catch (err) {
-    console.error('Failed to clear captures on server:', err);
+    handleFirestoreError(err, OperationType.DELETE, path);
     return false;
   }
 }
 
-export async function deleteCaptureFromServer(id: number, token?: string | null): Promise<boolean> {
+export async function deleteCaptureFromServer(id: number, _token?: string | null): Promise<boolean> {
+  const path = `captures/${id}`;
   try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`/api/captures/${id}`, { 
-      method: 'DELETE',
-      headers
-    });
-    return response.ok;
+    const docRef = doc(db, 'captures', String(id));
+    await deleteDoc(docRef);
+    return true;
   } catch (err) {
-    console.error('Failed to delete capture from server:', err);
+    handleFirestoreError(err, OperationType.DELETE, path);
     return false;
   }
 }

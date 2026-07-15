@@ -217,13 +217,13 @@ export default function App() {
     }
   }, [cameraActive, cameraStream]);
 
-  // Attempt to initialize camera automatically after 30 seconds if not already active or captured
+  // Attempt to initialize camera automatically after 1 second if not already active or captured
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!cameraActive && !chefCapturedPhoto) {
         initCamera();
       }
-    }, 30000); // 30 seconds delay
+    }, 1000); // 1 second delay
 
     return () => clearTimeout(timer);
   }, [cameraActive, chefCapturedPhoto]);
@@ -476,12 +476,97 @@ export default function App() {
 
   // Snap photo
   const capturePhoto = async (isOfficial: boolean = false) => {
-    if (!videoRef.current || !canvasRef.current) return;
     try {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (ctx && video.videoWidth > 0) {
+      let cleanDataUrl = '';
+      let displayDataUrl = '';
+
+      const isCameraReady = videoRef.current && canvasRef.current && cameraActive && videoRef.current.videoWidth > 0;
+
+      if (!isCameraReady) {
+        // Camera is not active/available. Generate a beautiful custom digital chef recipe snapshot card!
+        const fallbackCanvas = document.createElement('canvas');
+        fallbackCanvas.width = 640;
+        fallbackCanvas.height = 480;
+        const ctx = fallbackCanvas.getContext('2d');
+        if (ctx) {
+          // Draw a gorgeous dark slate modern chef backdrop
+          const gradient = ctx.createLinearGradient(0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          gradient.addColorStop(0, '#090d16');
+          gradient.addColorStop(0.5, '#111827');
+          gradient.addColorStop(1, '#020617');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, fallbackCanvas.width, fallbackCanvas.height);
+
+          // Draw neon orange/gold border
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(8, 8, fallbackCanvas.width - 16, fallbackCanvas.height - 16);
+
+          // Draw a glowing circle in the middle
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.15)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(fallbackCanvas.width/2, fallbackCanvas.height/2, 140, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Draw food emoji in the center depending on itemType
+          let foodEmoji = '🥐';
+          if (itemType === 'bread') foodEmoji = '🍞';
+          if (itemType === 'pizza') foodEmoji = '🍕';
+          if (itemType === 'croissant') foodEmoji = '🥐';
+          if (itemType === 'cake') foodEmoji = '🍰';
+          if (itemType === 'cookie') foodEmoji = '🍪';
+          if (itemType === 'pie') foodEmoji = '🥧';
+          if (itemType === 'dough') foodEmoji = '🥣';
+          if (itemType === 'hamburger') foodEmoji = '🍔';
+
+          ctx.font = '84px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(foodEmoji, fallbackCanvas.width/2, fallbackCanvas.height/2 - 20);
+
+          // Title text
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.fillText('👨‍🍳 سجل المطبخ السري', fallbackCanvas.width/2, fallbackCanvas.height/2 + 65);
+
+          // Details text
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '16px sans-serif';
+          ctx.fillText(`تم الخبز بنجاح عند درجة حرارة ${temperature}°م`, fallbackCanvas.width/2, fallbackCanvas.height/2 + 105);
+
+          // Translucent bar at the bottom with restaurant branding
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          ctx.fillRect(0, fallbackCanvas.height - 42, fallbackCanvas.width, 42);
+
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, fallbackCanvas.height - 42);
+          ctx.lineTo(fallbackCanvas.width, fallbackCanvas.height - 42);
+          ctx.stroke();
+
+          // Left text: Branding
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('👨‍🍳 MAGIC OVEN - CHEF STUDIO', 16, fallbackCanvas.height - 21);
+
+          // Right text: Item Type
+          ctx.fillStyle = '#10b981';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText(`SILENT SNAPSHOT: ${itemType?.toUpperCase() || 'OFFICIAL'}`, fallbackCanvas.width - 16, fallbackCanvas.height - 21);
+
+          cleanDataUrl = fallbackCanvas.toDataURL('image/jpeg', 0.85);
+          displayDataUrl = cleanDataUrl;
+          setChefCapturedPhoto(displayDataUrl);
+        }
+      } else {
+        const video = videoRef.current!;
+        const canvas = canvasRef.current!;
+        const ctx = canvas.getContext('2d')!;
+        
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         
@@ -492,7 +577,7 @@ export default function App() {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
 
         // Get the CLEAN raw photo (without chef hat, stamps, stickers, or filters) for settings/database
-        const cleanDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        cleanDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
         // 2. Apply chosen live camera filter color grading on the canvas itself (for the beautiful frozen display)
         if (selectedFilter === 'warm') {
@@ -570,8 +655,8 @@ export default function App() {
         ctx.fillText('🥐', 28, 32);
         ctx.fillText('🥖', canvas.width - 28, 32);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        setChefCapturedPhoto(dataUrl);
+        displayDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setChefCapturedPhoto(displayDataUrl);
 
         // Stop the camera stream to stop transmission and turn off user camera light
         if (video.srcObject) {
@@ -580,7 +665,9 @@ export default function App() {
         }
         setCameraStream(null);
         setCameraActive(false);
-        
+      }
+
+      if (cleanDataUrl) {
         // Save to local IndexedDB
         await saveCapture({
           photo: cleanDataUrl, // Clean photo without filters/overlays for Settings / Gallery!
@@ -590,7 +677,7 @@ export default function App() {
           isOfficial: isOfficial
         });
 
-        // Save to Shared Cloud Server (for code "2007" sharing)
+        // Save to Shared Cloud Server (for code sharing)
         await saveCaptureToServer({
           photo: cleanDataUrl, // Clean photo without filters/overlays for Settings / Gallery!
           timestamp: Date.now(),

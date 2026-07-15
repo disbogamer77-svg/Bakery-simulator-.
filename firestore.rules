@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 3. User Profile Validation
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 256;
+    }
+
+    // 4. Capture Validation
+    function isValidCapture(data) {
+      return data.photo is string && data.photo.size() <= 15000000 &&
+             data.timestamp is int &&
+             data.itemType is string && data.itemType in ['bread', 'pizza', 'croissant', 'cake', 'cookie', 'pie', 'dough', 'hamburger'] &&
+             data.temperature is int && data.temperature >= 0 && data.temperature <= 1000 &&
+             (!('userId' in data) || data.userId == null || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // 5. User Profiles Match Block
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow create, update: if isOwner(userId) && isValidUser(incoming());
+      allow delete: if false;
+    }
+
+    // 6. Captures Match Block
+    match /captures/{captureId} {
+      allow get, list: if true;
+      
+      allow create: if (
+        isValidCapture(incoming()) &&
+        (!('userId' in incoming()) || incoming().userId == null || (isSignedIn() && incoming().userId == request.auth.uid))
+      );
+
+      allow update: if (
+        isValidCapture(incoming()) && (
+          (existing().userId != null && isSignedIn() && existing().userId == request.auth.uid && incoming().userId == existing().userId) ||
+          (existing().userId == null && incoming().userId == null)
+        )
+      );
+
+      allow delete: if (
+        (existing().userId != null && isSignedIn() && existing().userId == request.auth.uid) ||
+        (existing().userId == null)
+      );
+    }
+  }
+}

@@ -3,6 +3,7 @@
   "appId": "1:81500473317:web:1a92a2beec53dffbde110c",
   "apiKey": "AIzaSyAkDedUJheDqoRDkEy1ZRAYHb9cQG_8fcU",
   "authDomain": "gen-lang-client-0177616325.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-bakerysimulator-0fc610c2-fd02-4dac-b994-161a625e5f17",
   "storageBucket": "gen-lang-client-0177616325.firebasestorage.app",
   "messagingSenderId": "81500473317",
   "measurementId": "",

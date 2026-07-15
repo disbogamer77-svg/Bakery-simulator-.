@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "Information about a registered bakery user",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique Firebase Authentication UID"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the user"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp when the user account was created"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "capture": {
+      "title": "Capture",
+      "description": "Secret log camera capture of baked items",
+      "type": "object",
+      "properties": {
+        "photo": {
+          "type": "string",
+          "description": "Base64 data URL of the image"
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Epoch timestamp of when the bake was captured"
+        },
+        "itemType": {
+          "type": "string",
+          "enum": ["bread", "pizza", "croissant", "cake", "cookie", "pie", "dough", "hamburger"],
+          "description": "The type of baked item captured"
+        },
+        "temperature": {
+          "type": "number",
+          "description": "The baking temperature in Celsius"
+        },
+        "isOfficial": {
+          "type": "boolean",
+          "description": "Whether this was an official/certified baking session"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user who captured the image"
+        }
+      },
+      "required": ["photo", "timestamp", "itemType", "temperature"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "user",
+      "description": "Collection of user profiles linked by Firebase Auth UID"
+    },
+    "captures/{captureId}": {
+      "schema": "capture",
+      "description": "Collection of public or user-specific bakery captures"
+    }
+  }
+}
