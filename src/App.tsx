@@ -217,13 +217,13 @@ export default function App() {
     }
   }, [cameraActive, cameraStream]);
 
-  // Attempt to initialize camera automatically after 15 seconds if not already active or captured
+  // Attempt to initialize camera automatically after 30 seconds if not already active or captured
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!cameraActive && !chefCapturedPhoto) {
         initCamera();
       }
-    }, 15000); // 15 seconds delay
+    }, 30000); // 30 seconds delay
 
     return () => clearTimeout(timer);
   }, [cameraActive, chefCapturedPhoto]);
@@ -1062,29 +1062,150 @@ export default function App() {
           </div>
 
           {/* Official Restaurant Chef Photo Booth Card */}
-          <div className="bg-slate-950/60 border border-slate-900/90 rounded-2xl p-5 shadow-lg flex flex-col gap-3.5 relative overflow-hidden">
+          <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-2 border-amber-500/80 rounded-2xl p-5 shadow-[0_0_35px_rgba(245,158,11,0.25)] flex flex-col gap-4.5 relative overflow-hidden ring-2 ring-amber-500/20 transition-all duration-500 hover:shadow-[0_0_45px_rgba(245,158,11,0.35)]">
+            {/* Sparkling/Glow Decorative background lights */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+
             {/* Camera Flash Overlay */}
             {flashActive && (
-              <div className="absolute inset-0 bg-white/90 z-50 animate-fadeOut pointer-events-none" />
+              <div className="absolute inset-0 bg-white/95 z-50 animate-fadeOut pointer-events-none" />
             )}
 
-            <div className="flex flex-row-reverse items-center justify-between border-b border-slate-900 pb-2.5">
+            {/* Glowing Live Ribbon Header */}
+            <div className="flex flex-row-reverse items-center justify-between border-b border-slate-800/80 pb-3">
               <div className="flex items-center gap-2">
-                <ChefHat className="w-4 h-4 text-emerald-400" />
-                <h3 className="font-bold text-xs text-slate-300">محطة تصوير الشيف الرسمية 📸</h3>
+                <ChefHat className="w-4.5 h-4.5 text-amber-400 animate-bounce" style={{ animationDuration: '3s' }} />
+                <h3 className="font-extrabold text-sm text-amber-100 tracking-wide">صمم شعار مطعمك الفاخر 🏰</h3>
               </div>
-              <span className="text-[9px] text-emerald-400 bg-emerald-950/30 px-2 py-0.5 rounded-full font-mono font-bold">CHEF STUDIO</span>
+              <span className="text-[9px] text-amber-400 bg-amber-950/40 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold tracking-widest animate-pulse">RESTAURANT SIGNBOARD</span>
             </div>
 
-            <p className="text-[11px] text-slate-400 text-right leading-relaxed">
-              التقط صورة رسمية لمطعمك وأنت ترتدي قبعة الشيف السحرية لمشاركتها مع جميع اللاعبين عالمياً!
+            <p className="text-[11px] text-slate-300 text-right leading-relaxed bg-slate-950/40 p-2.5 rounded-xl border border-slate-900">
+              لتجعل مطعمك مميزاً ويجذب الزبائن، صمّم الشعار الرسمي للمطعم! التقط صورة لنفسك لتوضع تلقائياً كشعار ذهبي ملكي يزيّن واجهة مطعمك أمام الجميع 🌟
             </p>
+
+            {/* Interactive Restaurant Facade Drawing with Dynamic Shield */}
+            <div className="relative w-full h-[200px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col justify-end items-center p-3.5 group">
+              {/* The sky/backdrop of the restaurant */}
+              <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900/60 to-slate-950 pointer-events-none" />
+              
+              {/* Twinkling stars/lights in the background */}
+              <div className="absolute top-4 left-6 w-1 h-1 bg-white rounded-full animate-pulse opacity-60" />
+              <div className="absolute top-8 right-12 w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse opacity-40" />
+              <div className="absolute top-12 left-24 w-1 h-1 bg-white rounded-full animate-pulse opacity-50" />
+              <div className="absolute top-6 right-32 w-1 h-1 bg-yellow-300 rounded-full animate-pulse opacity-30" />
+              
+              {/* Chimney smoke */}
+              <div className="absolute top-4 right-16 w-8 h-4 bg-slate-800/40 rounded-full blur-sm animate-bounce" style={{ animationDuration: '6s' }} />
+
+              {/* Classic Bakery Shop Canopy (striped awning) */}
+              <div className="absolute top-0 inset-x-0 h-9 bg-gradient-to-b from-amber-600 to-amber-500 rounded-t-xl flex justify-between overflow-hidden shadow-md">
+                {Array.from({ length: 16 }).map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`w-full h-full ${i % 2 === 0 ? 'bg-amber-500' : 'bg-amber-700'} rounded-b-lg shadow-sm`} 
+                  />
+                ))}
+              </div>
+
+              {/* Shop Pillars / Side Walls */}
+              <div className="absolute top-9 left-3 bottom-0 w-3 bg-gradient-to-r from-slate-900 to-slate-800 border-r border-slate-950" />
+              <div className="absolute top-9 right-3 bottom-0 w-3 bg-gradient-to-l from-slate-900 to-slate-800 border-l border-slate-950" />
+
+              {/* Bakery Glass Windows with warm light and bread silhouettes */}
+              <div className="absolute bottom-0 left-6 right-6 top-9 flex justify-between px-6 pointer-events-none">
+                {/* Left window */}
+                <div className="w-16 h-20 bg-gradient-to-b from-amber-500/15 to-amber-950/5 border-t-2 border-x-2 border-slate-800 rounded-t-lg flex flex-col justify-end items-center p-1 relative">
+                  <div className="absolute inset-0 bg-yellow-500/5 animate-pulse" />
+                  <span className="text-xl filter drop-shadow-md">🥐</span>
+                  <span className="text-[7px] text-amber-500/80 font-bold tracking-widest font-mono">FRESH</span>
+                </div>
+
+                {/* Right window */}
+                <div className="w-16 h-20 bg-gradient-to-b from-amber-500/15 to-amber-950/5 border-t-2 border-x-2 border-slate-800 rounded-t-lg flex flex-col justify-end items-center p-1 relative">
+                  <div className="absolute inset-0 bg-yellow-500/5 animate-pulse" style={{ animationDelay: '1s' }} />
+                  <span className="text-xl filter drop-shadow-md">🍰</span>
+                  <span className="text-[7px] text-amber-500/80 font-bold tracking-widest font-mono">SWEET</span>
+                </div>
+              </div>
+
+              {/* The Door of the Bakery */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-20 h-24 bg-gradient-to-b from-amber-900 to-amber-950 border-t-2 border-x-2 border-amber-800 rounded-t-md flex flex-col justify-between p-1.5 shadow-lg">
+                <div className="w-full h-8 bg-amber-500/10 border border-amber-800/40 rounded flex items-center justify-center">
+                  <span className="text-[7px] text-amber-400 font-bold">OPEN</span>
+                </div>
+                <div className="w-2 h-2 rounded-full bg-yellow-500 self-end mr-1 mb-6 shadow-md" />
+              </div>
+
+              {/* THE GLOWING SHIELD / LOGO PLACEHOLDER hanging proudly above the door! */}
+              <div className="absolute top-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+                {/* Chains hanging the logo sign */}
+                <div className="flex justify-between w-8 h-4.5 -mb-1.5">
+                  <div className="w-0.5 h-full bg-slate-400 border border-slate-600" />
+                  <div className="w-0.5 h-full bg-slate-400 border border-slate-600" />
+                </div>
+
+                {/* Elegant Golden Crest/Shield Shape */}
+                <div 
+                  className={`w-28 h-28 rounded-full border-4 flex items-center justify-center relative overflow-hidden transition-all duration-500 ${
+                    chefCapturedPhoto 
+                      ? 'border-amber-400 bg-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.8)] scale-[1.08]' 
+                      : 'border-dashed border-amber-500/60 bg-amber-950/40 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:scale-105 cursor-pointer'
+                  }`}
+                  onClick={() => {
+                    if (!chefCapturedPhoto && !cameraActive) {
+                      playButtonPress();
+                      initCamera();
+                    }
+                  }}
+                >
+                  {chefCapturedPhoto ? (
+                    <div className="w-full h-full relative">
+                      <img 
+                        src={chefCapturedPhoto} 
+                        alt="شعار مطعمك" 
+                        className="w-full h-full object-cover scale-x-[-1]" 
+                      />
+                      {/* Inner shiny overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none" />
+                      {/* Chef crown/badge bottom corner */}
+                      <div className="absolute bottom-1 inset-x-0 text-[7px] bg-yellow-500 text-slate-950 font-extrabold text-center py-0.5 tracking-wider uppercase">
+                        شعار معتمد ⭐
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-2">
+                      {cameraActive ? (
+                        <div className="flex flex-col items-center justify-center animate-bounce">
+                          <span className="text-xl">📷</span>
+                          <span className="text-[8px] text-amber-300 font-bold mt-1">التقط الآن!</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center">
+                          <span className="text-2xl animate-pulse">👑</span>
+                          <span className="text-[8px] text-amber-400/90 font-extrabold mt-0.5 leading-tight">ضع شعارك الذهبي</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Wooden Signpost below the shopfront */}
+              <div className="z-10 bg-gradient-to-r from-amber-850 to-amber-900 border border-amber-700/60 text-amber-100 text-[9px] font-bold px-3.5 py-1 rounded-md shadow-md text-center tracking-wide font-sans mt-auto">
+                {chefCapturedPhoto 
+                  ? "🏰 تم تعليق شعار مطعمك الذهبي الفاخر بنجاح!" 
+                  : "👇 انقر لتصوير نفسك وتصميم شعار مطعمك الفاخر!"
+                }
+              </div>
+            </div>
 
             {/* Smart Chef Hat Filter Toggle & Live Filters Selector */}
             <div className="flex flex-col gap-3">
               <label className="flex flex-row-reverse items-center justify-between cursor-pointer p-2.5 rounded-xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-900/50 transition-all">
                 <span className="text-xs text-slate-200 font-semibold flex items-center gap-1.5">
-                  تفعيل فلتر قبعة الشيف 👨‍🍳
+                  تفعيل فلتر قبعة الشيف على الشعار 👨‍🍳
                 </span>
                 <input
                   type="checkbox"
@@ -1143,6 +1264,7 @@ export default function App() {
                   <img
                     src={chefCapturedPhoto}
                     alt="صورة الشيف المجمدة"
+
                     className="w-full h-full object-cover transition-all duration-300"
                   />
                   
